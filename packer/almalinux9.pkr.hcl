@@ -118,11 +118,85 @@ source "proxmox-iso" "almalinux9" {
   # ★ boot_waitをさらに長くする
   #boot_wait = "90s"
   
+  # ★ boot_commandを調整（GRUBメニューが確実に表示されてから）
   boot_command = [
     "<wait10>",
     "e<wait5>",
     "<down><down>",
     "<end>",
     " inst.ks=https://raw.githubusercontent.com/ttanaka9211/proxmox-almalinux9-template/main/packer/http/ks.cfg",
-    "<f10><wait>"
+    "<ctrl-x><wait>"
   ]
+
+  # SSH接続設定
+  ssh_username           = "root"
+  ssh_password           = var.ssh_password
+  ssh_timeout            = "30m"
+  ssh_pty                = true
+  ssh_handshake_attempts = 20
+  
+  # その他の設定
+  qemu_agent      = true
+  scsi_controller = "virtio-scsi-single"
+}
+
+build {
+  name    = "almalinux9"
+  sources = ["source.proxmox-iso.almalinux9"]
+  
+  # ★ VM作成直後、インストール開始前にCPU設定を修正
+  provisioner "shell-local" {
+    inline = [
+      "echo 'Waiting for VM to be created...'",
+      "sleep 10",
+      "echo 'Setting CPU to host mode...'",
+      "ssh root@pve.tail7a7775.ts.net 'qm set ${var.template_vm_id} -cpu host'",
+      "echo 'Restarting VM with correct CPU settings...'",
+      "ssh root@pve.tail7a7775.ts.net 'qm stop ${var.template_vm_id} --skiplock || true'",
+      "sleep 5",
+      "ssh root@pve.tail7a7775.ts.net 'qm start ${var.template_vm_id}'",
+      "echo 'Waiting for VM to boot...'",
+      "sleep 60"
+    ]
+    only = ["proxmox-iso.almalinux9"]
+  }
+  
+  # システムアップデートと基本パッケージ
+  provisioner "shell" {
+    inline = [
+      "echo 'Starting system configuration...'",
+      "dnf update -y",
+      "dnf install -y epel-release",
+      "dnf install -y qemu-guest-agent cloud-init cloud-utils-growpart gdisk",
+      "systemctl enable qemu-guest-agent",
+      "systemctl enable cloud-init"
+    ]
+  }
+
+  # Cloud-Init設定
+  provisioner "shell" {
+    inline = [
+      "echo 'Configuring cloud-init...'",
+      "cat > /etc/cloud/cloud.cfg.d/99_pve.cfg << 'EOF'",
+      "datasource_list: [ NoCloud, ConfigDrive ]",
+      "EOF"
+    ]
+  }
+
+  # システムのクリーンアップ
+  provisioner "shell" {
+    inline = [
+      "echo 'Cleaning up system...'",
+      "dnf clean all",
+      "rm -rf /var/cache/dnf",
+      "truncate -s 0 /etc/machine-id",
+      "rm -f /var/lib/dbus/machine-id",
+      "ln -s /etc/machine-id /var/lib/dbus/machine-id",
+      "rm -rf /tmp/* /var/tmp/*",
+      "unset HISTFILE",
+      "rm -rf /root/.bash_history",
+      "history -c",
+      "sync"
+    ]
+  }
+}
