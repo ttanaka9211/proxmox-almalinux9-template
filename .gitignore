@@ -1,0 +1,24 @@
+# Secrets
+*.auto.pkrvars.hcl
+*.auto.tfvars
+secrets.*
+config.json
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform-*.log
+.terraform.lock.hcl
+
+# Packer
+packer_cache/
+packer*.log
+output-*/
+
+# OS
+.DS_Store
+*.swp
+*~
+*.backup*
+*.bak
