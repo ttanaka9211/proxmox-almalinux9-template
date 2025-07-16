@@ -114,24 +114,18 @@ source "proxmox-iso" "almalinux9" {
   cloud_init_storage_pool = "local-lvm"
   
   # HTTP server for kickstart
-  http_directory = "http"
 
   # ★ boot_waitをさらに長くする
   #boot_wait = "90s"
   
   # ★ boot_commandを調整（GRUBメニューが確実に表示されてから）
-  boot_command = [
-
-
-
-
-
-
-
-
-
-
-
+    boot_command = [
+    "<wait10>",
+    "<up><wait>",
+    "<tab><wait>",
+    " inst.ks=https://raw.githubusercontent.com/ttanaka9211/proxmox-almalinux9-template/main/packer/http/ks.cfg",
+    " inst.text console=ttyS0,115200n8",
+    "<enter><wait>"
   ]
 
   # SSH接続設定
