@@ -1,0 +1,8 @@
+  boot_command = [
+    "<wait10>",
+    "e<wait5>",
+    "<down><down>",
+    "<end>",
+    " inst.ks=https://raw.githubusercontent.com/ttanaka9211/proxmox-almalinux9-template/main/packer/http/ks.cfg",
+    "<f10><wait>"
+  ]
